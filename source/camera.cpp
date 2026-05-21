@@ -28,7 +28,7 @@ bool Camera::init() {
 		return false;
 	}
 
-	CAMU_SetSize(SELECT_OUT1, SIZE_DS_LCD, CONTEXT_A);
+	CAMU_SetSize(SELECT_OUT1, SIZE_QVGA, CONTEXT_A);
 	CAMU_SetOutputFormat(SELECT_OUT1, OUTPUT_RGB_565, CONTEXT_A);
 	CAMU_SetFrameRate(SELECT_OUT1, FRAME_RATE_30);
 	CAMU_SetNoiseFilter(SELECT_OUT1, true);
