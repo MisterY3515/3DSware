@@ -13,9 +13,10 @@ public:
 	 * @param rgb565 Il buffer dell'immagine.
 	 * @param width Larghezza immagine.
 	 * @param height Altezza immagine.
+	 * @param stride Larghezza reale del buffer in memoria (es. 512).
 	 * @return true se il salvataggio è andato a buon fine.
 	 */
-	static bool saveBMP(const char* path, const u16* rgb565, int width, int height);
+	static bool saveBMP(const char* path, const u16* rgb565, int width, int height, int stride = 0);
 
 	// TODO: savePNG e saveJPG verranno implementati con stb_image_write
 	// in un modulo separato a richiesta.

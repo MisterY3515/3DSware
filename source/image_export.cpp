@@ -24,8 +24,9 @@ struct BMPHeader {
 };
 #pragma pack(pop)
 
-bool ImageExport::saveBMP(const char* path, const u16* rgb565, int width, int height) {
+bool ImageExport::saveBMP(const char* path, const u16* rgb565, int width, int height, int stride) {
 	if (!path || !rgb565 || width <= 0 || height <= 0) return false;
+	if (stride <= 0) stride = width;
 
 	FILE* file = fopen(path, "wb");
 	if (!file) return false;
@@ -57,7 +58,7 @@ bool ImageExport::saveBMP(const char* path, const u16* rgb565, int width, int he
 	}
 
 	for (int y = 0; y < height; ++y) {
-		const u16* srcRow = rgb565 + (y * width);
+		const u16* srcRow = rgb565 + (y * stride);
 		u8* dst = rowData;
 		for (int x = 0; x < width; ++x) {
 			u16 pixel = srcRow[x];
