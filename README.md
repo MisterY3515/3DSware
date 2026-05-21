@@ -1,14 +1,14 @@
 # 3DSware
 
-3DSware è una libreria C++ leggera, stabile ed efficiente per console Nintendo 3DS (homebrew).
-Fornisce un framework di alto livello orientato ad oggetti per gestire l'hardware della console, eliminando la complessità delle API di basso livello di libctru, gestendo automaticamente buffer, conversioni, allocazioni ed evitando memory leak o crash di sistema.
+3DSware is a lightweight, stable, and highly efficient C++ library for Nintendo 3DS consoles (homebrew).
+It provides a high-level, object-oriented framework for interacting with the console's hardware, eliminating the complexity of low-level libctru APIs. It automatically handles buffers, conversions, allocations, and prevents memory leaks or system crashes.
 
-## Caratteristiche
-- **Camera (`hardware_camera`):** Inizializzazione sicura `cam:u`, acquisizione frame `RGB565` lineari e trasferimento diretto ad altissime prestazioni in VRAM usando il modulo DMA (PICA200 `GX_DisplayTransfer`), eliminando glitch e tearing.
-- **Image Export (`image_export`):** Modulo isolato per esportare frame in `BMP` RGB888 nativo (senza dipendenze aggiuntive) o in formati compressi, occupandosi del padding e dell'orientamento per output di altissima qualità.
-- **Microfono (`hardware_mic`):** Gestione totale di `mic:u`. Permette di acquisire audio tramite un ring buffer circolare, supporta streaming real-time per VoIP (es. Discord) o registrazioni bufferizzate su file system.
-- **File System (`hardware_fs`):** Utility essenziali e sicure per controllare, leggere, creare directory ed eliminare file dalla SD card, a prova di crash (gestione sicura dell'assenza della scheda).
+## Features
+- **Camera (`hardware_camera`):** Safe initialization of `cam:u`, acquisition of linear `RGB565` frames, and ultra-high-performance direct transfer to VRAM using the DMA module (PICA200 `GX_DisplayTransfer`), completely eliminating glitches and tearing.
+- **Image Export (`image_export`):** Isolated module to export frames to pure `BMP` RGB888 format (without any extra dependencies) or compressed formats. It natively handles padding and bottom-up orientation for the highest output quality.
+- **Microphone (`hardware_mic`):** Total management of `mic:u`. Captures audio using a circular ring buffer, fully supporting real-time streaming for VoIP applications (e.g., Discord) or buffered recordings to the filesystem.
+- **File System (`hardware_fs`):** Essential and crash-proof utilities to check, read, recursively create directories, and delete files from the SD card (handles missing SD cards safely).
 
-## Licenza
-Questo progetto è distribuito sotto **Licenza MIT**.
-È aperto, gratuito per uso commerciale e non commerciale, e puoi integrarlo nel tuo codice closed-source o open-source senza vincoli virali. Vedi il file `LICENSE` per i dettagli.
+## License
+This project is licensed under the **MIT License**.
+It is open, free for both commercial and non-commercial use, and can be integrated into your closed-source or open-source projects without any viral copyleft constraints. See the `LICENSE` file for details.

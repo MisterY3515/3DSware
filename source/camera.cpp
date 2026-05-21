@@ -7,7 +7,7 @@ Camera& Camera::getInstance() {
 	return instance;
 }
 
-Camera::Camera() : ready(false), camBuffer(nullptr), camBufferSize(0), width(512), height(256) {}
+Camera::Camera() : ready(false), camBuffer(nullptr), camBufferSize(0), width(320), height(240) {}
 
 Camera::~Camera() {
 	shutdown();
@@ -28,8 +28,8 @@ bool Camera::init() {
 		return false;
 	}
 
-	CAMU_SetSize(SELECT_OUT1, SIZE_VGA);
-	CAMU_SetOutputFormat(SELECT_OUT1, OUTPUT_RGB_565);
+	CAMU_SetSize(SELECT_OUT1, SIZE_DS_LCD, CONTEXT_A);
+	CAMU_SetOutputFormat(SELECT_OUT1, OUTPUT_RGB_565, CONTEXT_A);
 	CAMU_SetFrameRate(SELECT_OUT1, FRAME_RATE_30);
 	CAMU_SetNoiseFilter(SELECT_OUT1, true);
 	CAMU_SetAutoExposure(SELECT_OUT1, true);
@@ -76,8 +76,7 @@ bool Camera::captureFrame(u16* outBuffer) {
 		s32 index = 0;
 		svcWaitSynchronizationN(&index, events, 1, false, 1000000LL); // Check every 1ms
 		
-		CAMU_GetBufferErrorFlags(PORT_CAM1, &transfered); // clear error flags if any
-		CAMU_GetTransferBytes(PORT_CAM1, &transfered);
+		CAMU_GetTransferBytes(&transfered, PORT_CAM1);
 
 		if (transfered == camBufferSize) {
 			captured = true;
@@ -94,8 +93,11 @@ bool Camera::captureFrame(u16* outBuffer) {
 	CAMU_StopCapture(PORT_CAM1);
 	
 	if (captured) {
-		Result res = CAMU_SetReceiving(&camBuffer, camBuffer, PORT_CAM1, camBufferSize, (s16)transferUnit);
+		Handle camReceiveEvent = 0;
+		Result res = CAMU_SetReceiving(&camReceiveEvent, camBuffer, PORT_CAM1, camBufferSize, (s16)(transferUnit & 0xFFFF));
 		if (R_SUCCEEDED(res)) {
+			svcWaitSynchronization(camReceiveEvent, 300000000LL);
+			svcCloseHandle(camReceiveEvent);
 			svcSleepThread(10000000); // 10ms wait to let DMA finish
 			if (outBuffer) {
 				memcpy(outBuffer, camBuffer, camBufferSize);
@@ -120,13 +122,14 @@ bool Camera::captureToTexture(C3D_Tex* tex) {
 	GSPGPU_FlushDataCache(camBuffer, camBufferSize);
 
 	// DMA Transfer to tiled VRAM texture
+	// Tex is 512x256 but we transfer 320x240
 	GX_DisplayTransfer((u32*)camBuffer, GX_BUFFER_DIM(width, height),
-	                   (u32*)tex->data, GX_BUFFER_DIM(width, height),
+	                   (u32*)tex->data, GX_BUFFER_DIM(512, 256),
 	                   GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(1) | 
 	                   GX_TRANSFER_RAW_COPY(0) | 
 	                   GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) | 
 	                   GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) | 
-	                   GX_TRANSFER_SCALING(GX_PT3D));
+	                   GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO));
 
 	gspWaitForPPF();
 	return true;
