@@ -63,50 +63,32 @@ bool Camera::captureFrame(u16* outBuffer) {
 
 	CAMU_Activate(SELECT_OUT1);
 	CAMU_ClearBuffer(PORT_CAM1);
+
+	// Set up receiving BEFORE starting capture
+	Handle camReceiveEvent = 0;
+	Result res = CAMU_SetReceiving(&camReceiveEvent, camBuffer, PORT_CAM1, camBufferSize, (s16)(transferUnit & 0xFFFF));
+	if (R_FAILED(res)) {
+		return false;
+	}
+
 	CAMU_StartCapture(PORT_CAM1);
 
-	Handle sleepHandle;
-	svcCreateTimer(&sleepHandle, RESET_ONESHOT);
-	svcSetTimer(sleepHandle, 200000000LL, 0); // 200ms timeout
+	// Wait for the frame to arrive (500ms timeout)
+	Result waitRes = svcWaitSynchronization(camReceiveEvent, 500000000LL);
+	svcCloseHandle(camReceiveEvent);
 
-	bool captured = false;
-	while (true) {
-		u32 transfered = 0;
-		Handle events[2] = { sleepHandle, 0 };
-		s32 index = 0;
-		svcWaitSynchronizationN(&index, events, 1, false, 1000000LL); // Check every 1ms
-		
-		CAMU_GetTransferBytes(&transfered, PORT_CAM1);
-
-		if (transfered == camBufferSize) {
-			captured = true;
-			break;
-		}
-		
-		// check timeout
-		if (svcWaitSynchronization(sleepHandle, 0) == 0) {
-			break;
-		}
-	}
-	
-	svcCloseHandle(sleepHandle);
 	CAMU_StopCapture(PORT_CAM1);
-	
-	if (captured) {
-		Handle camReceiveEvent = 0;
-		Result res = CAMU_SetReceiving(&camReceiveEvent, camBuffer, PORT_CAM1, camBufferSize, (s16)(transferUnit & 0xFFFF));
-		if (R_SUCCEEDED(res)) {
-			svcWaitSynchronization(camReceiveEvent, 300000000LL);
-			svcCloseHandle(camReceiveEvent);
-			svcSleepThread(10000000); // 10ms wait to let DMA finish
-			if (outBuffer) {
-				memcpy(outBuffer, camBuffer, camBufferSize);
-			}
-			return true;
-		}
+
+	if (R_FAILED(waitRes)) {
+		return false;
 	}
-	
-	return false;
+
+	GSPGPU_FlushDataCache(camBuffer, camBufferSize);
+
+	if (outBuffer) {
+		memcpy(outBuffer, camBuffer, camBufferSize);
+	}
+	return true;
 }
 
 u16* Camera::getInternalBuffer() const {
@@ -117,9 +99,6 @@ bool Camera::captureToTexture(C3D_Tex* tex) {
 	if (!ready || !camBuffer || !tex) return false;
 
 	if (!captureFrame()) return false;
-
-	// Flush the linear buffer so GPU sees it
-	GSPGPU_FlushDataCache(camBuffer, camBufferSize);
 
 	// DMA Transfer to tiled VRAM texture
 	// Tex is 512x256 but we transfer 320x240
