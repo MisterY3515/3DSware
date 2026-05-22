@@ -28,7 +28,7 @@ bool Camera::init() {
 		return false;
 	}
 
-	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_OUT2;
+	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_IN1;
 	CAMU_SetSize(selectOut, SIZE_QVGA, CONTEXT_A);
 	CAMU_SetOutputFormat(selectOut, OUTPUT_RGB_565, CONTEXT_A);
 	CAMU_SetFrameRate(selectOut, FRAME_RATE_30);
@@ -43,7 +43,7 @@ bool Camera::init() {
 void Camera::shutdown() {
 	if (!ready) return;
 	
-	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_OUT2;
+	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_IN1;
 	CAMU_Activate(selectOut);
 	CAMU_ClearBuffer(currentPort);
 	
@@ -59,7 +59,7 @@ void Camera::shutdown() {
 bool Camera::captureFrame(u16* outBuffer) {
 	if (!ready || !camBuffer) return false;
 
-	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_OUT2;
+	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_IN1;
 
 	u32 transferUnit = 0;
 	CAMU_GetMaxBytes(&transferUnit, width, height);
@@ -114,7 +114,14 @@ bool Camera::captureToTexture(C3D_Tex* tex) {
 	}
 
 	for (int y = 0; y < height; y++) {
-		memcpy(stageBuffer + (y * 512), camBuffer + (y * width), width * 2);
+		for (int x = 0; x < width; x++) {
+			u16 pixel = camBuffer[y * width + x];
+			// Convert BGR565 to RGB565
+			u16 r = pixel & 0x1F;
+			u16 g = (pixel >> 5) & 0x3F;
+			u16 b = (pixel >> 11) & 0x1F;
+			stageBuffer[y * 512 + x] = (r << 11) | (g << 5) | b;
+		}
 	}
 
 	GSPGPU_FlushDataCache(stageBuffer, 512 * 256 * 2);
@@ -135,7 +142,8 @@ bool Camera::captureToTexture(C3D_Tex* tex) {
 void Camera::flipCamera() {
 	if (!ready) return;
 	currentPort = (currentPort == PORT_CAM1) ? PORT_CAM2 : PORT_CAM1;
-	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_OUT2;
+	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_IN1;
+	CAMU_Activate(selectOut);
 	CAMU_SetSize(selectOut, SIZE_QVGA, CONTEXT_A);
 	CAMU_SetOutputFormat(selectOut, OUTPUT_RGB_565, CONTEXT_A);
 	CAMU_SetFrameRate(selectOut, FRAME_RATE_30);
