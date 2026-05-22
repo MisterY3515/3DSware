@@ -47,6 +47,7 @@ public:
 
 	bool isReady() const { return ready; }
 	bool isStreaming() const { return streaming; }
+	Result getLastError() const { return lastError; }
 
 private:
 	Mic();
@@ -61,6 +62,7 @@ private:
 	u8* micBuffer;
 	u32 micBufferSize;
 	u32 lastMicPos;
+	Result lastError;
 };
 
 } // namespace Hardware

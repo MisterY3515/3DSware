@@ -7,7 +7,7 @@ Camera& Camera::getInstance() {
 	return instance;
 }
 
-Camera::Camera() : ready(false), camBuffer(nullptr), camBufferSize(0), width(320), height(240) {}
+Camera::Camera() : ready(false), camBuffer(nullptr), camBufferSize(0), width(320), height(240), currentPort(PORT_CAM1) {}
 
 Camera::~Camera() {
 	shutdown();
@@ -28,12 +28,13 @@ bool Camera::init() {
 		return false;
 	}
 
-	CAMU_SetSize(SELECT_OUT1, SIZE_QVGA, CONTEXT_A);
-	CAMU_SetOutputFormat(SELECT_OUT1, OUTPUT_RGB_565, CONTEXT_A);
-	CAMU_SetFrameRate(SELECT_OUT1, FRAME_RATE_30);
-	CAMU_SetNoiseFilter(SELECT_OUT1, true);
-	CAMU_SetAutoExposure(SELECT_OUT1, true);
-	CAMU_SetAutoWhiteBalance(SELECT_OUT1, true);
+	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_OUT2;
+	CAMU_SetSize(selectOut, SIZE_QVGA, CONTEXT_A);
+	CAMU_SetOutputFormat(selectOut, OUTPUT_RGB_565, CONTEXT_A);
+	CAMU_SetFrameRate(selectOut, FRAME_RATE_30);
+	CAMU_SetNoiseFilter(selectOut, true);
+	CAMU_SetAutoExposure(selectOut, true);
+	CAMU_SetAutoWhiteBalance(selectOut, true);
 
 	ready = true;
 	return true;
@@ -42,8 +43,9 @@ bool Camera::init() {
 void Camera::shutdown() {
 	if (!ready) return;
 	
-	CAMU_Activate(SELECT_OUT1);
-	CAMU_ClearBuffer(PORT_CAM1);
+	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_OUT2;
+	CAMU_Activate(selectOut);
+	CAMU_ClearBuffer(currentPort);
 	
 	if (camBuffer) {
 		linearFree(camBuffer);
@@ -57,27 +59,29 @@ void Camera::shutdown() {
 bool Camera::captureFrame(u16* outBuffer) {
 	if (!ready || !camBuffer) return false;
 
+	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_OUT2;
+
 	u32 transferUnit = 0;
 	CAMU_GetMaxBytes(&transferUnit, width, height);
-	CAMU_SetTransferBytes(PORT_CAM1, transferUnit, width, height);
+	CAMU_SetTransferBytes(currentPort, transferUnit, width, height);
 
-	CAMU_Activate(SELECT_OUT1);
-	CAMU_ClearBuffer(PORT_CAM1);
+	CAMU_Activate(selectOut);
+	CAMU_ClearBuffer(currentPort);
 
 	// Set up receiving BEFORE starting capture
 	Handle camReceiveEvent = 0;
-	Result res = CAMU_SetReceiving(&camReceiveEvent, camBuffer, PORT_CAM1, camBufferSize, (s16)(transferUnit & 0xFFFF));
+	Result res = CAMU_SetReceiving(&camReceiveEvent, camBuffer, currentPort, camBufferSize, (s16)(transferUnit & 0xFFFF));
 	if (R_FAILED(res)) {
 		return false;
 	}
 
-	CAMU_StartCapture(PORT_CAM1);
+	CAMU_StartCapture(currentPort);
 
 	// Wait for the frame to arrive (500ms timeout)
 	Result waitRes = svcWaitSynchronization(camReceiveEvent, 500000000LL);
 	svcCloseHandle(camReceiveEvent);
 
-	CAMU_StopCapture(PORT_CAM1);
+	CAMU_StopCapture(currentPort);
 
 	if (R_FAILED(waitRes)) {
 		return false;
@@ -100,9 +104,23 @@ bool Camera::captureToTexture(C3D_Tex* tex) {
 
 	if (!captureFrame()) return false;
 
+	// GX_DisplayTransfer requires matching dimensions if scaling is disabled.
+	// We must stage the 320x240 linear buffer into a 512x256 linear buffer.
+	static u16* stageBuffer = nullptr;
+	if (!stageBuffer) {
+		stageBuffer = (u16*)linearAlloc(512 * 256 * 2);
+		if (!stageBuffer) return false;
+		memset(stageBuffer, 0, 512 * 256 * 2);
+	}
+
+	for (int y = 0; y < height; y++) {
+		memcpy(stageBuffer + (y * 512), camBuffer + (y * width), width * 2);
+	}
+
+	GSPGPU_FlushDataCache(stageBuffer, 512 * 256 * 2);
+
 	// DMA Transfer to tiled VRAM texture
-	// Tex is 512x256 but we transfer 320x240
-	GX_DisplayTransfer((u32*)camBuffer, GX_BUFFER_DIM(width, height),
+	GX_DisplayTransfer((u32*)stageBuffer, GX_BUFFER_DIM(512, 256),
 	                   (u32*)tex->data, GX_BUFFER_DIM(512, 256),
 	                   GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(1) | 
 	                   GX_TRANSFER_RAW_COPY(0) | 
@@ -112,6 +130,18 @@ bool Camera::captureToTexture(C3D_Tex* tex) {
 
 	gspWaitForPPF();
 	return true;
+}
+
+void Camera::flipCamera() {
+	if (!ready) return;
+	currentPort = (currentPort == PORT_CAM1) ? PORT_CAM2 : PORT_CAM1;
+	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_OUT2;
+	CAMU_SetSize(selectOut, SIZE_QVGA, CONTEXT_A);
+	CAMU_SetOutputFormat(selectOut, OUTPUT_RGB_565, CONTEXT_A);
+	CAMU_SetFrameRate(selectOut, FRAME_RATE_30);
+	CAMU_SetNoiseFilter(selectOut, true);
+	CAMU_SetAutoExposure(selectOut, true);
+	CAMU_SetAutoWhiteBalance(selectOut, true);
 }
 
 } // namespace Hardware

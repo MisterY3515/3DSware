@@ -39,6 +39,12 @@ public:
 	bool captureToTexture(C3D_Tex* tex);
 
 	bool isReady() const { return ready; }
+	
+	/**
+	 * Scambia la telecamera tra esterna (PORT_CAM1) e interna (PORT_CAM2).
+	 * Da chiamare mentre isReady() è true.
+	 */
+	void flipCamera();
 
 private:
 	Camera();
@@ -51,6 +57,7 @@ private:
 	u16* camBuffer;
 	u32 camBufferSize;
 	u16 width, height;
+	u32 currentPort;
 };
 
 } // namespace Hardware

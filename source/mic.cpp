@@ -9,7 +9,7 @@ Mic& Mic::getInstance() {
 	return instance;
 }
 
-Mic::Mic() : ready(false), streaming(false), micBuffer(nullptr), micBufferSize(0), lastMicPos(0) {}
+Mic::Mic() : ready(false), streaming(false), micBuffer(nullptr), micBufferSize(0), lastMicPos(0), lastError(0) {}
 
 Mic::~Mic() {
 	shutdown();
@@ -18,12 +18,16 @@ Mic::~Mic() {
 bool Mic::init() {
 	if (ready) return true;
 
-	micBufferSize = 0x10000; // 64KB
+	micBufferSize = 0x30000; // 192KB, as in official example
 	micBuffer = (u8*)linearMemAlign(micBufferSize, 0x1000);
-	if (!micBuffer) return false;
+	if (!micBuffer) {
+		lastError = 0xDEADBEEF; // Alloc error
+		return false;
+	}
 
 	memset(micBuffer, 0, micBufferSize);
 	Result res = micInit(micBuffer, micBufferSize);
+	lastError = res;
 	if (R_FAILED(res)) {
 		linearFree(micBuffer);
 		micBuffer = nullptr;
