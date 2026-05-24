@@ -35,6 +35,11 @@ bool Camera::init() {
 	CAMU_SetNoiseFilter(selectOut, true);
 	CAMU_SetAutoExposure(selectOut, true);
 	CAMU_SetAutoWhiteBalance(selectOut, true);
+	if (currentPort == PORT_CAM2) {
+		CAMU_FlipImage(selectOut, FLIP_HORIZONTAL, CONTEXT_A);
+	} else {
+		CAMU_FlipImage(selectOut, FLIP_NONE, CONTEXT_A);
+	}
 
 	ready = true;
 	return true;
@@ -144,12 +149,18 @@ void Camera::flipCamera() {
 	currentPort = (currentPort == PORT_CAM1) ? PORT_CAM2 : PORT_CAM1;
 	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_IN1;
 	CAMU_Activate(selectOut);
+	CAMU_ClearBuffer(currentPort);
 	CAMU_SetSize(selectOut, SIZE_QVGA, CONTEXT_A);
 	CAMU_SetOutputFormat(selectOut, OUTPUT_RGB_565, CONTEXT_A);
 	CAMU_SetFrameRate(selectOut, FRAME_RATE_30);
 	CAMU_SetNoiseFilter(selectOut, true);
 	CAMU_SetAutoExposure(selectOut, true);
 	CAMU_SetAutoWhiteBalance(selectOut, true);
+	if (currentPort == PORT_CAM2) {
+		CAMU_FlipImage(selectOut, FLIP_HORIZONTAL, CONTEXT_A);
+	} else {
+		CAMU_FlipImage(selectOut, FLIP_NONE, CONTEXT_A);
+	}
 }
 
 } // namespace Hardware

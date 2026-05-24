@@ -56,7 +56,7 @@ bool Mic::startStreaming() {
 	if (streaming) return true;
 	if (!ready || !micBuffer) return false;
 
-	u32 audioSize = micBufferSize - 4;
+	u32 audioSize = micBufferSize;
 	Result res = MICU_StartSampling(MICU_ENCODING_PCM16_SIGNED, MICU_SAMPLE_RATE_32730, 0, audioSize, true);
 	if (R_FAILED(res)) return false;
 
@@ -73,7 +73,7 @@ void Mic::stopStreaming() {
 
 bool Mic::hasNewSamples() const {
 	if (!streaming || !ready) return false;
-	const u32 limit = micBufferSize >= 4 ? micBufferSize - 4 : 0;
+	const u32 limit = micBufferSize;
 	if (limit == 0 || lastMicPos >= limit) return false;
 	
 	const u32 currentPos = micGetLastSampleOffset();
@@ -85,7 +85,7 @@ bool Mic::hasNewSamples() const {
 size_t Mic::readSamples(int16_t* buffer, size_t maxSamples) {
 	if (!buffer || maxSamples == 0 || !streaming || !ready) return 0;
 	
-	u32 limit = micBufferSize >= 4 ? micBufferSize - 4 : 0;
+	u32 limit = micBufferSize;
 	if (limit == 0) return 0;
 	
 	if (lastMicPos >= limit) lastMicPos = 0;
