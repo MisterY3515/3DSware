@@ -1,6 +1,7 @@
 #include "3dsware/mic.h"
 #include <cstring>
 #include <cstdio>
+#include <malloc.h>
 
 namespace Hardware {
 
@@ -19,7 +20,7 @@ bool Mic::init() {
 	if (ready) return true;
 
 	micBufferSize = 0x30000; // 192KB, as in official example
-	micBuffer = (u8*)linearMemAlign(micBufferSize, 0x1000);
+	micBuffer = (u8*)memalign(0x1000, micBufferSize);
 	if (!micBuffer) {
 		lastError = 0xDEADBEEF; // Alloc error
 		return false;
@@ -29,7 +30,7 @@ bool Mic::init() {
 	Result res = micInit(micBuffer, micBufferSize);
 	lastError = res;
 	if (R_FAILED(res)) {
-		linearFree(micBuffer);
+		free(micBuffer);
 		micBuffer = nullptr;
 		return false;
 	}
@@ -45,7 +46,7 @@ void Mic::shutdown() {
 	
 	if (micBuffer) {
 		micExit();
-		linearFree(micBuffer);
+		free(micBuffer);
 		micBuffer = nullptr;
 	}
 	
