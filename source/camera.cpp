@@ -36,7 +36,7 @@ bool Camera::init() {
 	CAMU_SetAutoExposure(selectOut, true);
 	CAMU_SetAutoWhiteBalance(selectOut, true);
 	if (currentPort == PORT_CAM2) {
-		CAMU_FlipImage(selectOut, FLIP_REVERSE, CONTEXT_A);
+		CAMU_FlipImage(selectOut, FLIP_HORIZONTAL, CONTEXT_A);
 	} else {
 		CAMU_FlipImage(selectOut, FLIP_NONE, CONTEXT_A);
 	}
@@ -160,7 +160,7 @@ void Camera::flipCamera() {
 	CAMU_SetAutoExposure(selectOut, true);
 	CAMU_SetAutoWhiteBalance(selectOut, true);
 	if (currentPort == PORT_CAM2) {
-		CAMU_FlipImage(selectOut, FLIP_REVERSE, CONTEXT_A);
+		CAMU_FlipImage(selectOut, FLIP_HORIZONTAL, CONTEXT_A);
 	} else {
 		CAMU_FlipImage(selectOut, FLIP_NONE, CONTEXT_A);
 	}
