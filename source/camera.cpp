@@ -29,6 +29,10 @@ bool Camera::init() {
 	}
 
 	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_IN1;
+	u32 sleepSelect = (currentPort == PORT_CAM1) ? SELECT_IN1 : SELECT_OUT1;
+	CAMU_SetSleepCamera(sleepSelect);
+	CAMU_Activate(selectOut);
+	
 	CAMU_SetSize(selectOut, SIZE_QVGA, CONTEXT_A);
 	CAMU_SetOutputFormat(selectOut, OUTPUT_RGB_565, CONTEXT_A);
 	CAMU_SetFrameRate(selectOut, FRAME_RATE_30);
@@ -149,8 +153,13 @@ bool Camera::captureToTexture(C3D_Tex* tex) {
 
 void Camera::flipCamera() {
 	if (!ready) return;
+	
+	u32 oldSelect = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_IN1;
+	CAMU_SetSleepCamera(oldSelect);
+	
 	currentPort = (currentPort == PORT_CAM1) ? PORT_CAM2 : PORT_CAM1;
 	u32 selectOut = (currentPort == PORT_CAM1) ? SELECT_OUT1 : SELECT_IN1;
+	
 	CAMU_Activate(selectOut);
 	CAMU_ClearBuffer(currentPort);
 	CAMU_SetSize(selectOut, SIZE_QVGA, CONTEXT_A);
