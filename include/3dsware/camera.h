@@ -55,6 +55,7 @@ private:
 
 	bool ready;
 	u16* camBuffer;
+	u16* stageBuffer;
 	u32 camBufferSize;
 	u16 width, height;
 	u32 currentPort;

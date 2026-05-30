@@ -7,7 +7,7 @@ Camera& Camera::getInstance() {
 	return instance;
 }
 
-Camera::Camera() : ready(false), camBuffer(nullptr), camBufferSize(0), width(320), height(240), currentPort(PORT_CAM1) {}
+Camera::Camera() : ready(false), camBuffer(nullptr), stageBuffer(nullptr), camBufferSize(0), width(320), height(240), currentPort(PORT_CAM1) {}
 
 Camera::~Camera() {
 	shutdown();
@@ -36,7 +36,7 @@ bool Camera::init() {
 	CAMU_SetAutoExposure(selectOut, true);
 	CAMU_SetAutoWhiteBalance(selectOut, true);
 	if (currentPort == PORT_CAM2) {
-		CAMU_FlipImage(selectOut, FLIP_HORIZONTAL, CONTEXT_A);
+		CAMU_FlipImage(selectOut, FLIP_REVERSE, CONTEXT_A);
 	} else {
 		CAMU_FlipImage(selectOut, FLIP_NONE, CONTEXT_A);
 	}
@@ -55,6 +55,10 @@ void Camera::shutdown() {
 	if (camBuffer) {
 		linearFree(camBuffer);
 		camBuffer = nullptr;
+	}
+	if (stageBuffer) {
+		linearFree(stageBuffer);
+		stageBuffer = nullptr;
 	}
 	
 	camExit();
@@ -111,7 +115,6 @@ bool Camera::captureToTexture(C3D_Tex* tex) {
 
 	// GX_DisplayTransfer requires matching dimensions if scaling is disabled.
 	// We must stage the 320x240 linear buffer into a 512x256 linear buffer.
-	static u16* stageBuffer = nullptr;
 	if (!stageBuffer) {
 		stageBuffer = (u16*)linearAlloc(512 * 256 * 2);
 		if (!stageBuffer) return false;
@@ -157,7 +160,7 @@ void Camera::flipCamera() {
 	CAMU_SetAutoExposure(selectOut, true);
 	CAMU_SetAutoWhiteBalance(selectOut, true);
 	if (currentPort == PORT_CAM2) {
-		CAMU_FlipImage(selectOut, FLIP_HORIZONTAL, CONTEXT_A);
+		CAMU_FlipImage(selectOut, FLIP_REVERSE, CONTEXT_A);
 	} else {
 		CAMU_FlipImage(selectOut, FLIP_NONE, CONTEXT_A);
 	}
